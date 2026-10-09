@@ -80,17 +80,8 @@ const mockApi = {
   },
   mostrar_en_carpeta: async (ruta) => ({ok: false, error: "Modo de prueba en navegador: no se puede abrir el explorador de archivos aca."}),
   cancelar_procesamiento: async () => { if (mockApi._progreso) mockApi._progreso.terminado = true; return {ok: true}; },
-  estado_licencia: async () => ({pro: false, restantes: 5, limite: 5}),
-  estado_sesion: async () => ({logueado: false, email: null}),
-  iniciar_login_google: async () => ({ok: false, error: "Modo de prueba en navegador: el login real solo funciona en la app instalada."}),
-  cerrar_sesion: async () => ({ok: true}),
-  revalidar_sesion: async () => ({ok: false, error: "Modo de prueba en navegador."}),
-  mis_dispositivos: async () => ({ok: true, dispositivos: []}),
-  cerrar_sesion_remota: async () => ({ok: false, error: "Modo de prueba en navegador."}),
-  dispositivos_pendientes: async () => ({ok: false, error: "Modo de prueba en navegador."}),
-  cerrar_sesion_remota_pendiente: async () => ({ok: false, error: "Modo de prueba en navegador."}),
-  elegir_archivo_adjunto: async () => ({ok: false, error: "Modo de prueba en navegador: no se puede abrir el explorador aca."}),
-  reportar_error: async () => ({ok: false, error: "Modo de prueba en navegador."}),
+  cargar_configuracion: async () => ({ok: true, settings: {}}),
+  guardar_configuracion: async () => ({ok: true}),
   obtener_estado_actualizacion: async () => ({hay_actualizacion: false}),
   instalar_actualizacion: async () => ({ok: false, error: "Modo de prueba en navegador: la auto-instalacion solo funciona en la app real."}),
   confirmar_actualizacion: async () => ({ok: false, error: "Modo de prueba en navegador."}),
@@ -113,113 +104,12 @@ const mockApi = {
 let api = (window.pywebview && window.pywebview.api) ? window.pywebview.api : mockApi;
 window.addEventListener("pywebviewready", () => {
   api = window.pywebview.api;
-  refrescarPlanBadge();
   revisarActualizacion();
-  chequearSesion();
-});
-
-/* ---------------- Auth gate: bloquea toda la app sin sesion ---------------- */
-const authGate = document.getElementById("authGate");
-const gateBtn = document.getElementById("gateLoginGoogle");
-const gateMsg = document.getElementById("gateMsg");
-
-async function chequearSesion() {
-  const sesion = await api.estado_sesion().catch(() => ({ logueado: false }));
-  authGate.style.display = sesion.logueado ? "none" : "flex";
-
-  if (sesion.logueado) {
-    if (typeof cargarConfiguracionInicial === "function") cargarConfiguracionInicial();
-    // Revalida contra el servidor en segundo plano: si cerraste esta
-    // sesion remotamente desde la web, la app te vuelve a pedir login.
-    api.revalidar_sesion().then((r) => {
-      if (!r.ok) {
-        gateMsg.textContent = r.error || "Tu sesión se cerró. Iniciá sesión de nuevo.";
-        gateMsg.className = "auth-gate-msg err";
-        authGate.style.display = "flex";
-      } else {
-        refrescarPlanBadge();
-        refrescarCuentaPop();
-      }
-    }).catch(() => {});
-  }
-  return sesion.logueado;
-}
-
-const gateDispositivos = document.getElementById("gateDispositivos");
-const gateDispositivosList = document.getElementById("gateDispositivosList");
-
-function entrarSesionOk() {
-  gateMsg.textContent = "¡Listo! Entrando...";
-  gateMsg.className = "auth-gate-msg ok";
-  gateDispositivos.style.display = "none";
-  authGate.style.display = "none";
-  refrescarPlanBadge();
-  refrescarCuentaPop();
   if (typeof cargarConfiguracionInicial === "function") cargarConfiguracionInicial();
-}
-
-async function mostrarDispositivosPendientes() {
-  gateDispositivos.style.display = "block";
-  gateDispositivosList.innerHTML = '<p class="auth-gate-msg">Cargando tus equipos...</p>';
-
-  const resultado = await api.dispositivos_pendientes().catch((err) => ({ ok: false, error: String(err) }));
-  if (!resultado.ok || !resultado.dispositivos || !resultado.dispositivos.length) {
-    gateDispositivosList.innerHTML = "";
-    return;
-  }
-
-  gateDispositivosList.innerHTML = "";
-  resultado.dispositivos.forEach((d) => {
-    const row = document.createElement("div");
-    row.className = "dispositivo-row";
-    const activo = d.es_actual_pro ? '<span class="dispositivo-tag">Pro activo aca</span>' : "";
-    row.innerHTML = `
-      <div>
-        <div class="dispositivo-nombre">${d.device_label || "Equipo sin nombre"} ${activo}</div>
-        <div class="dispositivo-fecha">Ultima vez: ${formatearFechaRelativa(d.last_seen_at)}</div>
-      </div>
-      <button class="dispositivo-cerrar" data-device="${d.device_id}">Cerrar sesión</button>
-    `;
-    gateDispositivosList.appendChild(row);
-  });
-
-  gateDispositivosList.querySelectorAll(".dispositivo-cerrar").forEach((btn) => {
-    btn.addEventListener("click", async () => {
-      btn.disabled = true;
-      btn.textContent = "...";
-      const r = await api.cerrar_sesion_remota_pendiente(btn.dataset.device).catch((err) => ({ ok: false, error: String(err) }));
-      if (r.ok) {
-        entrarSesionOk();
-      } else if (r.bloqueado) {
-        gateMsg.textContent = r.error || "No se pudo cerrar esa sesión.";
-        gateMsg.className = "auth-gate-msg err";
-        mostrarDispositivosPendientes();
-      } else {
-        btn.disabled = false;
-        btn.textContent = "Cerrar sesión";
-        alert(r.error || "No se pudo cerrar esa sesión.");
-      }
-    });
-  });
-}
-
-gateBtn.addEventListener("click", async () => {
-  gateBtn.disabled = true;
-  gateDispositivos.style.display = "none";
-  gateMsg.textContent = "Se abrió tu navegador para iniciar sesión con Google. Completá el login ahí y volvé acá.";
-  gateMsg.className = "auth-gate-msg";
-  const resultado = await api.iniciar_login_google().catch((err) => ({ ok: false, error: String(err) }));
-  gateBtn.disabled = false;
-  if (resultado.ok) {
-    entrarSesionOk();
-  } else {
-    gateMsg.textContent = resultado.error || "No se pudo iniciar sesión.";
-    gateMsg.className = "auth-gate-msg err";
-    if (resultado.bloqueado) mostrarDispositivosPendientes();
-  }
 });
-
-chequearSesion();
+// En modo de prueba en navegador no hay evento pywebviewready: cargamos
+// la configuracion (local) ya mismo.
+if (api === mockApi && typeof cargarConfiguracionInicial === "function") cargarConfiguracionInicial();
 
 /* ---------------- Campanita de actualizaciones ---------------- */
 let _actualizacionListaMostrada = false;
@@ -303,61 +193,6 @@ document.getElementById("btnActualizar").addEventListener("click", async () => {
   }
 });
 
-/* ---------------- Plan gratis / Pro ---------------- */
-async function refrescarPlanBadge() {
-  const btn = document.getElementById("btnPlan");
-  if (!btn) return;
-  try {
-    const estado = await api.estado_licencia();
-    btn.classList.remove("is-pro", "is-low");
-    const chip = document.getElementById("cuentaChipPlan");
-    if (estado.pro) {
-      btn.textContent = "PRO";
-      btn.classList.add("is-pro");
-      if (chip) { chip.textContent = "Pro"; chip.className = "chip-plan is-pro"; }
-    } else {
-      btn.textContent = `Gratis · te quedan ${estado.restantes} de ${estado.limite} hoy`;
-      if (estado.restantes <= 1) btn.classList.add("is-low");
-      if (chip) { chip.textContent = "Gratis"; chip.className = "chip-plan"; }
-    }
-  } catch (err) {
-    // si no se puede consultar, dejamos el badge por defecto sin romper la app
-  }
-}
-
-/* ---------------- Menu de cuenta (avatar arriba a la derecha) ---------------- */
-const cuentaPop = document.getElementById("cuentaPop");
-
-async function refrescarCuentaPop() {
-  const sesion = await api.estado_sesion().catch(() => ({ logueado: false }));
-  const email = sesion.email || "";
-  const inicial = email ? email[0].toUpperCase() : "?";
-  document.getElementById("cuentaInicial").textContent = inicial;
-  document.getElementById("cuentaInicialGrande").textContent = inicial;
-  document.getElementById("cuentaEmail").textContent = email;
-}
-refrescarCuentaPop();
-
-document.getElementById("btnCuenta").addEventListener("click", () => {
-  cuentaPop.classList.toggle("open");
-});
-document.addEventListener("click", (e) => {
-  if (cuentaPop.classList.contains("open") && !e.target.closest(".cuenta-wrap")) {
-    cuentaPop.classList.remove("open");
-  }
-});
-
-document.getElementById("btnCerrarSesionCuenta").addEventListener("click", async () => {
-  cuentaPop.classList.remove("open");
-  await api.cerrar_sesion().catch(() => null);
-  window.location.reload();
-});
-
-/* ---------------- Dispositivos ---------------- */
-const dispositivosOverlay = document.getElementById("dispositivosOverlay");
-const dispositivosStatus = document.getElementById("dispositivosStatus");
-const dispositivosList = document.getElementById("dispositivosList");
-
 function formatearFechaRelativa(iso) {
   if (!iso) return "";
   try {
@@ -367,119 +202,7 @@ function formatearFechaRelativa(iso) {
   }
 }
 
-async function abrirDispositivos() {
-  cuentaPop.classList.remove("open");
-  dispositivosOverlay.classList.add("open");
-  dispositivosStatus.textContent = "Cargando...";
-  dispositivosList.innerHTML = "";
-
-  const resultado = await api.mis_dispositivos().catch((err) => ({ ok: false, error: String(err) }));
-  if (!resultado.ok) {
-    dispositivosStatus.textContent = resultado.error || "No se pudo cargar la lista.";
-    return;
-  }
-
-  dispositivosStatus.textContent = "";
-  if (!resultado.dispositivos.length) {
-    dispositivosStatus.textContent = "Todavía no hay historial.";
-    return;
-  }
-
-  resultado.dispositivos.forEach((d) => {
-    const row = document.createElement("div");
-    row.className = "dispositivo-row";
-    const activo = d.es_actual_pro ? '<span class="dispositivo-tag">Pro activo aca</span>' : "";
-    row.innerHTML = `
-      <div>
-        <div class="dispositivo-nombre">${d.device_label || "Equipo sin nombre"} ${activo}</div>
-        <div class="dispositivo-fecha">Ultima vez: ${formatearFechaRelativa(d.last_seen_at)}</div>
-      </div>
-      <button class="dispositivo-cerrar" data-device="${d.device_id}">Cerrar sesión</button>
-    `;
-    dispositivosList.appendChild(row);
-  });
-
-  dispositivosList.querySelectorAll(".dispositivo-cerrar").forEach((btn) => {
-    btn.addEventListener("click", async () => {
-      btn.disabled = true;
-      btn.textContent = "...";
-      const r = await api.cerrar_sesion_remota(btn.dataset.device).catch((err) => ({ ok: false, error: String(err) }));
-      if (r.ok) {
-        abrirDispositivos();
-        refrescarPlanBadge();
-      } else {
-        btn.disabled = false;
-        btn.textContent = "Cerrar sesión";
-        alert(r.error || "No se pudo cerrar esa sesión.");
-      }
-    });
-  });
-}
-
-document.getElementById("btnAbrirDispositivos").addEventListener("click", abrirDispositivos);
-document.getElementById("dispositivosClose").addEventListener("click", () => dispositivosOverlay.classList.remove("open"));
-dispositivosOverlay.addEventListener("click", (e) => { if (e.target === dispositivosOverlay) dispositivosOverlay.classList.remove("open"); });
-
-/* ---------------- Reportar un problema ---------------- */
-const reporteOverlay = document.getElementById("reporteOverlay");
-const reporteTexto = document.getElementById("reporteTexto");
-const reporteMsg = document.getElementById("reporteMsg");
-const reporteAdjuntoNombre = document.getElementById("reporteAdjuntoNombre");
-let reporteAdjuntoActual = null;
-
-function abrirReporte() {
-  cuentaPop.classList.remove("open");
-  reporteTexto.value = "";
-  reporteMsg.textContent = "";
-  reporteMsg.className = "licencia-msg";
-  reporteAdjuntoActual = null;
-  reporteAdjuntoNombre.textContent = "";
-  document.getElementById("reporteIncluirLog").checked = true;
-  reporteOverlay.classList.add("open");
-  reporteTexto.focus();
-}
-document.getElementById("btnAbrirReporte").addEventListener("click", abrirReporte);
-document.getElementById("reporteClose").addEventListener("click", () => reporteOverlay.classList.remove("open"));
-document.getElementById("reporteCancelar").addEventListener("click", () => reporteOverlay.classList.remove("open"));
-reporteOverlay.addEventListener("click", (e) => { if (e.target === reporteOverlay) reporteOverlay.classList.remove("open"); });
-
-document.getElementById("reporteAdjuntar").addEventListener("click", async () => {
-  const r = await api.elegir_archivo_adjunto().catch((err) => ({ ok: false, error: String(err) }));
-  if (r.ok) {
-    reporteAdjuntoActual = { nombre: r.nombre, datos_b64: r.datos_b64 };
-    reporteAdjuntoNombre.textContent = `Adjunto: ${r.nombre}`;
-  } else if (r.error) {
-    reporteAdjuntoNombre.textContent = r.error;
-  }
-});
-
-document.getElementById("reporteEnviar").addEventListener("click", async () => {
-  const mensaje = reporteTexto.value.trim();
-  if (!mensaje) {
-    reporteMsg.textContent = "Escribí una descripción del problema.";
-    reporteMsg.className = "licencia-msg err";
-    return;
-  }
-  const btn = document.getElementById("reporteEnviar");
-  btn.disabled = true;
-  reporteMsg.textContent = "Enviando...";
-  reporteMsg.className = "licencia-msg";
-
-  const incluirLog = document.getElementById("reporteIncluirLog").checked;
-  const resultado = await api.reportar_error(mensaje, incluirLog, reporteAdjuntoActual).catch((err) => ({ ok: false, error: String(err) }));
-  btn.disabled = false;
-
-  if (resultado.ok) {
-    reporteMsg.textContent = "¡Gracias! Ya recibimos tu reporte.";
-    reporteMsg.className = "licencia-msg ok";
-    setTimeout(() => reporteOverlay.classList.remove("open"), 1400);
-  } else {
-    reporteMsg.textContent = resultado.error || "No se pudo enviar el reporte.";
-    reporteMsg.className = "licencia-msg err";
-  }
-});
-
-/* ---------------- Plantillas (mascaras guardadas en la cuenta) ---------------- */
+/* ---------------- Plantillas (mascaras guardadas en esta PC) ---------------- */
 const guardarPlantillaOverlay = document.getElementById("guardarPlantillaOverlay");
 const plantillaNombreInput = document.getElementById("plantillaNombreInput");
 const guardarPlantillaMsg = document.getElementById("guardarPlantillaMsg");
@@ -597,31 +320,6 @@ async function abrirPlantillas() {
 document.getElementById("btnMisPlantillas").addEventListener("click", abrirPlantillas);
 document.getElementById("plantillasClose").addEventListener("click", () => plantillasOverlay.classList.remove("open"));
 plantillasOverlay.addEventListener("click", (e) => { if (e.target === plantillasOverlay) plantillasOverlay.classList.remove("open"); });
-
-/* ---------------- Upsell a Pro al terminar de exportar ---------------- */
-async function mostrarUpsellSiCorresponde() {
-  try {
-    const estado = await api.estado_licencia();
-    if (estado && !estado.pro) {
-      const usados = estado.limite - estado.restantes;
-      const texto = estado.restantes > 0
-        ? `Ya usaste ${usados} de ${estado.limite} clips gratis hoy — te quedan ${estado.restantes}. Con el plan Pro no tenés límite diario, pago único de $20 USD.`
-        : `Usaste tus ${estado.limite} clips gratis de hoy. Con el plan Pro no tenés límite diario, pago único de $20 USD.`;
-      document.getElementById("upsellTexto").textContent = texto;
-      document.getElementById("upsellOverlay").classList.add("open");
-    }
-  } catch (err) {
-    // si no se puede consultar el plan, no mostramos nada
-  }
-}
-document.getElementById("upsellCerrar").addEventListener("click", () => {
-  document.getElementById("upsellOverlay").classList.remove("open");
-});
-document.getElementById("upsellOverlay").addEventListener("click", (e) => {
-  if (e.target.id === "upsellOverlay") document.getElementById("upsellOverlay").classList.remove("open");
-});
-
-refrescarPlanBadge();
 
 /* ---------------- Topbar: pasos + tema ---------------- */
 function renderSteps() {
@@ -1869,19 +1567,6 @@ async function procesarTodo() {
   const btn = document.getElementById("btnSiguiente");
   const btnCancelar = document.getElementById("btnCancelar");
 
-  const estadoPrevio = await api.estado_licencia().catch(() => null);
-  if (estadoPrevio && !estadoPrevio.pro && state.clips.length > estadoPrevio.restantes) {
-    document.getElementById("logBox").innerHTML = "";
-    _logsMostrados = 0;
-    logLinea(
-      `Llegaste al limite de la version gratis: ${estadoPrevio.limite} clips por dia (te quedan ${estadoPrevio.restantes}).`,
-      "err"
-    );
-    logLinea("Activa Clipxel Pro (boton con la llave, arriba) para procesar sin limite diario.", "err");
-    abrirModalLicencia();
-    return;
-  }
-
   _seEstaCancelando = false;
   state.renderizando = true;
   document.getElementById("btnAtras").disabled = true;
@@ -1969,8 +1654,6 @@ async function procesarTodo() {
       imgPreviewRender.style.display = "none";
       document.getElementById("previewRenderPlaceholder").textContent = "Listo.";
       document.getElementById("previewRenderPlaceholder").style.display = "block";
-      refrescarPlanBadge();
-      mostrarUpsellSiCorresponde();
       if (_seEstaCancelando) {
         _seEstaCancelando = false;
         resetearPasoProcesar();
@@ -2166,7 +1849,6 @@ function pintarAtajos() {
 }
 
 document.getElementById("btnAbrirAtajos").addEventListener("click", () => {
-  cuentaPop.classList.remove("open");
   pintarAtajos();
   atajosOverlay.classList.add("open");
 });

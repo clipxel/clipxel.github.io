@@ -10,7 +10,6 @@ import json
 import logging
 import mimetypes
 import os
-import platform
 import sys
 import tempfile
 import threading
@@ -60,11 +59,6 @@ RESOLUCIONES = {
     "1080p (1920x1080)": (1920, 1080),
     "720p (1280x720)": (1280, 720),
 }
-
-LIMITE_GRATIS_DIARIO = 5
-
-SUPABASE_URL = "https://ujuibmpvicuibidkbdrq.supabase.co"
-SUPABASE_ANON_KEY = "sb_publishable_x3mWkJJdqcimXIVkgbHEUA_-TWxzxtf"
 
 VERSION_APP = "2.4.2"
 URL_ULTIMA_VERSION = "https://api.github.com/repos/clipxel/clipxel.github.io/releases/latest"
@@ -182,7 +176,6 @@ class Api:
         self._preview_render_b64 = None
         self._preview_render_ultima = 0.0
         self._motor_gpu_cache = "sin_probar"
-        self._login_pendiente = None  # tokens de un login bloqueado por otro equipo, a la espera de que el usuario cierre esa sesion
 
     def _detectar_motor_gpu(self):
         """Prueba una sola vez por sesion que encoder de video acelerado por
@@ -195,497 +188,73 @@ class Api:
     def set_ventana(self, ventana):
         self._ventana = ventana
 
-    # ---------- cuenta (login con Google) / limite gratis ----------
-    def _cargar_sesion(self):
-        try:
-            with open(_ruta_datos_usuario("sesion.json"), "r", encoding="utf-8") as f:
-                return json.load(f)
-        except Exception:
-            return {}
-
-    def _guardar_sesion(self, datos):
-        with open(_ruta_datos_usuario("sesion.json"), "w", encoding="utf-8") as f:
-            json.dump(datos, f)
-
-    def _borrar_sesion(self):
-        try:
-            os.remove(_ruta_datos_usuario("sesion.json"))
-        except FileNotFoundError:
-            pass
-
-    def _id_dispositivo(self):
-        """Identificador estable de esta instalacion (no es un fingerprint de
-        hardware real, alcanza para que una cuenta Pro no se comparta entre
-        varias PCs sin querer). Se genera una sola vez y se guarda aparte de
-        la sesion, para que sobreviva a cerrar/iniciar sesion de nuevo."""
-        ruta = _ruta_datos_usuario("dispositivo.json")
-        try:
-            with open(ruta, "r", encoding="utf-8") as f:
-                datos = json.load(f)
-            if datos.get("device_id"):
-                return datos["device_id"]
-        except Exception:
-            pass
-        import uuid
-        nuevo_id = str(uuid.uuid4())
-        with open(ruta, "w", encoding="utf-8") as f:
-            json.dump({"device_id": nuevo_id}, f)
-        return nuevo_id
-
-    def _es_pro(self):
-        # CLIPXEL Pro es gratis para todos: no hay limite diario ni
-        # chequeo de plan, cualquier cuenta logueada cuenta como Pro.
-        return True
-
-    def estado_sesion(self):
-        sesion = self._cargar_sesion()
-        return {"logueado": bool(sesion.get("access_token")), "email": sesion.get("email")}
-
-    def cerrar_sesion(self):
-        """Cierra la sesion local. Ademas libera este dispositivo en el
-        servidor: si no lo hacemos, la cuenta Pro queda "activa" en este
-        equipo para siempre y bloquea el login en cualquier otro hasta que
-        alguien entre a "Mis dispositivos" y lo cierre a mano."""
-        try:
-            self._llamar_rpc("cerrar_sesion_dispositivo", {"p_device_id": self._id_dispositivo()})
-        except Exception:
-            pass
-        self._borrar_sesion()
-        return {"ok": True}
-
-    def iniciar_login_google(self):
-        """Abre el navegador del sistema para el login de Google (via
-        Supabase Auth, flujo PKCE) y espera a que el usuario lo complete.
-        Al volver, liga automaticamente cualquier compra pendiente hecha con
-        ese mismo email y activa Pro en este equipo si corresponde."""
-        import base64
-        import hashlib
-        import http.server
-        import secrets
-        import urllib.parse
-        import urllib.request
-        import webbrowser
-
-        code_verifier = base64.urlsafe_b64encode(secrets.token_bytes(32)).decode("ascii").rstrip("=")
-        code_challenge = base64.urlsafe_b64encode(
-            hashlib.sha256(code_verifier.encode("ascii")).digest()
-        ).decode("ascii").rstrip("=")
-
-        resultado_callback = {}
-        evento_listo = threading.Event()
-
-        class ManejadorCallback(http.server.BaseHTTPRequestHandler):
-            def do_GET(self):
-                query = urllib.parse.urlparse(self.path).query
-                params = urllib.parse.parse_qs(query)
-                resultado_callback["code"] = (params.get("code") or [None])[0]
-                resultado_callback["error"] = (params.get("error_description") or params.get("error") or [None])[0]
-                self.send_response(200)
-                self.send_header("Content-Type", "text/html; charset=utf-8")
-                self.end_headers()
-                self.wfile.write(
-                    "<html><body style='font-family:sans-serif;text-align:center;padding-top:80px'>"
-                    "<h2>Listo, volvé a Clipxel.</h2><p>Ya podés cerrar esta pestaña.</p>"
-                    "</body></html>".encode("utf-8")
-                )
-                evento_listo.set()
-
-            def log_message(self, *args):
-                pass
-
-        servidor = http.server.HTTPServer(("127.0.0.1", 0), ManejadorCallback)
-        puerto = servidor.server_address[1]
-        threading.Thread(target=servidor.handle_request, daemon=True).start()
-
-        redirect_to = f"http://127.0.0.1:{puerto}/callback"
-        url_login = (
-            f"{SUPABASE_URL}/auth/v1/authorize?"
-            + urllib.parse.urlencode({
-                "provider": "google",
-                "redirect_to": redirect_to,
-                "code_challenge": code_challenge,
-                "code_challenge_method": "s256",
-            })
-        )
-        webbrowser.open(url_login)
-
-        if not evento_listo.wait(timeout=180):
-            return {"ok": False, "error": "Se agoto el tiempo de espera del login. Probá de nuevo."}
-
-        if resultado_callback.get("error") or not resultado_callback.get("code"):
-            return {"ok": False, "error": resultado_callback.get("error") or "No se pudo completar el login."}
-
-        try:
-            req = urllib.request.Request(
-                f"{SUPABASE_URL}/auth/v1/token?grant_type=pkce",
-                data=json.dumps({
-                    "auth_code": resultado_callback["code"],
-                    "code_verifier": code_verifier,
-                }).encode("utf-8"),
-                headers={"apikey": SUPABASE_ANON_KEY, "Content-Type": "application/json"},
-                method="POST",
-            )
-            with urllib.request.urlopen(req, timeout=15) as resp:
-                token_datos = json.loads(resp.read().decode("utf-8"))
-        except Exception as e:
-            return {"ok": False, "error": f"No se pudo validar el login: {e}"}
-
-        access_token = token_datos.get("access_token")
-        email = (token_datos.get("user") or {}).get("email")
-        if not access_token or not email:
-            return {"ok": False, "error": "Login incompleto, probá de nuevo."}
-
-        return self._intentar_iniciar_sesion(access_token, token_datos.get("refresh_token"), email)
-
-    def _intentar_iniciar_sesion(self, access_token, refresh_token, email):
-        """Registra este equipo en el servidor. Si la cuenta Pro esta activa
-        en otro equipo, no aborta: guarda los tokens en self._login_pendiente
-        para que el usuario pueda ver "sus dispositivos" y cerrar el otro
-        desde aca mismo (sin necesitar sesion propia en este equipo), y
-        despues reintentar."""
-        device_id = self._id_dispositivo()
-        try:
-            sesion_datos = self._llamar_rpc(
-                "iniciar_sesion",
-                {"p_device_id": device_id, "p_device_label": platform.node()},
-                access_token=access_token,
-            )
-        except Exception as e:
-            return {"ok": False, "error": f"No se pudo activar la cuenta: {e}"}
-
-        if not sesion_datos.get("ok"):
-            self._login_pendiente = None
-            return {"ok": False, "error": sesion_datos.get("error") or "No se pudo iniciar sesion."}
-
-        if sesion_datos.get("bloqueado_por_otro_equipo"):
-            self._login_pendiente = {"access_token": access_token, "refresh_token": refresh_token, "email": email}
-            return {
-                "ok": False,
-                "bloqueado": True,
-                "error": "Tu cuenta CLIPXEL Pro ya esta activa en otro equipo. Cerrala desde aca abajo y volvé a intentar.",
-            }
-
-        self._login_pendiente = None
-        self._guardar_sesion({
-            "access_token": access_token,
-            "refresh_token": refresh_token,
-            "email": email,
-            "plan": sesion_datos.get("plan", "free"),
-            "device_id": device_id,
-        })
-        return {"ok": True, "email": email, "plan": sesion_datos.get("plan", "free")}
-
-    def revalidar_sesion(self):
-        """Se llama al arrancar la app (sin abrir el navegador): renueva el
-        token con el refresh_token guardado y vuelve a llamar iniciar_sesion
-        en el servidor. Asi, si alguien cerro esta sesion remotamente desde
-        la web, la app lo detecta y pide loguearse de nuevo en vez de seguir
-        confiando ciegamente en lo que quedo guardado en disco."""
-        import urllib.request
-
-        sesion = self._cargar_sesion()
-        refresh_token = sesion.get("refresh_token")
-        if not refresh_token:
-            return {"ok": False, "error": "No hay sesion guardada."}
-
-        try:
-            req = urllib.request.Request(
-                f"{SUPABASE_URL}/auth/v1/token?grant_type=refresh_token",
-                data=json.dumps({"refresh_token": refresh_token}).encode("utf-8"),
-                headers={"apikey": SUPABASE_ANON_KEY, "Content-Type": "application/json"},
-                method="POST",
-            )
-            with urllib.request.urlopen(req, timeout=15) as resp:
-                token_datos = json.loads(resp.read().decode("utf-8"))
-            access_token = token_datos["access_token"]
-        except Exception:
-            self._borrar_sesion()
-            return {"ok": False, "error": "Tu sesion expiro. Iniciá sesión de nuevo."}
-
-        device_id = self._id_dispositivo()
-        try:
-            req = urllib.request.Request(
-                f"{SUPABASE_URL}/rest/v1/rpc/iniciar_sesion",
-                data=json.dumps({"p_device_id": device_id, "p_device_label": platform.node()}).encode("utf-8"),
-                headers={
-                    "apikey": SUPABASE_ANON_KEY,
-                    "Authorization": f"Bearer {access_token}",
-                    "Content-Type": "application/json",
-                },
-                method="POST",
-            )
-            with urllib.request.urlopen(req, timeout=15) as resp:
-                sesion_datos = json.loads(resp.read().decode("utf-8"))
-        except Exception:
-            return {"ok": True, "plan": sesion.get("plan", "free")}  # sin internet: seguimos con lo guardado
-
-        if not sesion_datos.get("ok"):
-            self._borrar_sesion()
-            return {"ok": False, "error": sesion_datos.get("error") or "Se cerro tu sesion."}
-
-        self._guardar_sesion({
-            **sesion,
-            "access_token": access_token,
-            "refresh_token": token_datos.get("refresh_token", refresh_token),
-            "plan": sesion_datos.get("plan", "free"),
-        })
-        return {"ok": True, "plan": sesion_datos.get("plan", "free")}
-
-    def _llamar_rpc(self, nombre, parametros, access_token=None):
-        import urllib.request
-
-        if access_token is None:
-            access_token = self._cargar_sesion().get("access_token")
-        if not access_token:
-            return {"ok": False, "error": "No hay sesion activa."}
-        req = urllib.request.Request(
-            f"{SUPABASE_URL}/rest/v1/rpc/{nombre}",
-            data=json.dumps(parametros).encode("utf-8"),
-            headers={
-                "apikey": SUPABASE_ANON_KEY,
-                "Authorization": f"Bearer {access_token}",
-                "Content-Type": "application/json",
-            },
-            method="POST",
-        )
-        with urllib.request.urlopen(req, timeout=15) as resp:
-            return json.loads(resp.read().decode("utf-8"))
-
-    def mis_dispositivos(self):
-        try:
-            dispositivos = self._llamar_rpc("mis_dispositivos", {})
-            return {"ok": True, "dispositivos": dispositivos}
-        except Exception as e:
-            return {"ok": False, "error": f"No se pudo cargar la lista: {e}"}
-
-    def cerrar_sesion_remota(self, device_id):
-        try:
-            resultado = self._llamar_rpc("cerrar_sesion_dispositivo", {"p_device_id": device_id})
-            return resultado
-        except Exception as e:
-            return {"ok": False, "error": f"No se pudo cerrar esa sesion: {e}"}
-
-    # ---------- gestion de dispositivos desde la pantalla de login bloqueada ----------
-    # Cuando iniciar_sesion() devuelve bloqueado_por_otro_equipo, todavia no
-    # hay una sesion propia guardada en este equipo (por eso _llamar_rpc no
-    # tiene de donde sacar el token). Estos dos metodos usan el access_token
-    # que ya conseguimos con Google (guardado en self._login_pendiente) para
-    # poder listar y cerrar el otro dispositivo sin necesitar loguearse antes.
-    def dispositivos_pendientes(self):
-        if not self._login_pendiente:
-            return {"ok": False, "error": "No hay un login pendiente."}
-        try:
-            dispositivos = self._llamar_rpc(
-                "mis_dispositivos", {}, access_token=self._login_pendiente["access_token"]
-            )
-            return {"ok": True, "dispositivos": dispositivos}
-        except Exception as e:
-            return {"ok": False, "error": f"No se pudo cargar la lista: {e}"}
-
-    def cerrar_sesion_remota_pendiente(self, device_id):
-        if not self._login_pendiente:
-            return {"ok": False, "error": "No hay un login pendiente."}
-        pendiente = self._login_pendiente
-        try:
-            resultado = self._llamar_rpc(
-                "cerrar_sesion_dispositivo", {"p_device_id": device_id}, access_token=pendiente["access_token"]
-            )
-        except Exception as e:
-            return {"ok": False, "error": f"No se pudo cerrar esa sesion: {e}"}
-        if not resultado.get("ok"):
-            return resultado
-        # ya liberamos el otro equipo: reintentamos el login para terminar de activar este.
-        return self._intentar_iniciar_sesion(pendiente["access_token"], pendiente["refresh_token"], pendiente["email"])
-
+    # ---------- configuracion local (tema, pincel, motor, calidad) ----------
+    # Antes se guardaba en la cuenta (Supabase) para sincronizar entre PCs;
+    # ahora Clipxel no tiene cuentas, asi que queda en un archivo local.
     def cargar_configuracion(self):
-        """Tema, pincel, motor y calidad preferidos, guardados en la cuenta.
-        Se aplican solos al iniciar sesion en cualquier PC."""
         try:
-            filas = self._llamar_rpc("mi_perfil", {})
-            settings = (filas[0] if filas else {}).get("settings") or {}
-            return {"ok": True, "settings": settings}
-        except Exception as e:
-            return {"ok": False, "error": str(e)}
+            with open(_ruta_datos_usuario("configuracion.json"), "r", encoding="utf-8") as f:
+                return {"ok": True, "settings": json.load(f)}
+        except Exception:
+            return {"ok": True, "settings": {}}
 
     def guardar_configuracion(self, settings):
         try:
-            return self._llamar_rpc("guardar_configuracion", {"p_settings": settings})
+            with open(_ruta_datos_usuario("configuracion.json"), "w", encoding="utf-8") as f:
+                json.dump(settings, f)
+            return {"ok": True}
         except Exception as e:
             return {"ok": False, "error": str(e)}
 
-    # ---------- plantillas (mascaras guardadas en la cuenta) ----------
-    def mis_plantillas(self):
+    # ---------- plantillas (mascaras guardadas en esta PC) ----------
+    def _leer_plantillas(self):
         try:
-            plantillas = self._llamar_rpc("mis_plantillas", {})
-            return {"ok": True, "plantillas": plantillas}
-        except Exception as e:
-            return {"ok": False, "error": f"No se pudo cargar la lista: {e}"}
+            with open(_ruta_datos_usuario("plantillas.json"), "r", encoding="utf-8") as f:
+                return json.load(f)
+        except Exception:
+            return []
+
+    def _guardar_plantillas(self, plantillas):
+        with open(_ruta_datos_usuario("plantillas.json"), "w", encoding="utf-8") as f:
+            json.dump(plantillas, f)
+
+    def mis_plantillas(self):
+        resumen = [
+            {k: p.get(k) for k in ("id", "nombre", "camara_marca", "camara_modelo", "updated_at")}
+            for p in self._leer_plantillas()
+        ]
+        resumen.sort(key=lambda p: p.get("updated_at") or "", reverse=True)
+        return {"ok": True, "plantillas": resumen}
 
     def obtener_plantilla(self, plantilla_id):
-        try:
-            filas = self._llamar_rpc("obtener_plantilla", {"p_id": plantilla_id})
-            if not filas:
-                return {"ok": False, "error": "No se encontro la plantilla."}
-            return {"ok": True, "plantilla": filas[0]}
-        except Exception as e:
-            return {"ok": False, "error": str(e)}
+        for p in self._leer_plantillas():
+            if p.get("id") == plantilla_id:
+                return {"ok": True, "plantilla": p}
+        return {"ok": False, "error": "No se encontro la plantilla."}
 
     def guardar_plantilla(self, nombre, mascara_b64, camara_marca=None, camara_modelo=None,
                            ancho_ref=None, alto_ref=None, motor=None, sigma=None):
-        try:
-            return self._llamar_rpc("guardar_plantilla", {
-                "p_nombre": nombre,
-                "p_mascara_b64": mascara_b64,
-                "p_camara_marca": camara_marca,
-                "p_camara_modelo": camara_modelo,
-                "p_ancho_ref": ancho_ref,
-                "p_alto_ref": alto_ref,
-                "p_motor": motor,
-                "p_sigma": sigma,
-            })
-        except Exception as e:
-            return {"ok": False, "error": f"No se pudo guardar la plantilla: {e}"}
+        import uuid
+        plantillas = self._leer_plantillas()
+        plantillas.append({
+            "id": str(uuid.uuid4()),
+            "nombre": nombre,
+            "mascara_b64": mascara_b64,
+            "camara_marca": camara_marca,
+            "camara_modelo": camara_modelo,
+            "ancho_ref": ancho_ref,
+            "alto_ref": alto_ref,
+            "motor": motor,
+            "sigma": sigma,
+            "updated_at": datetime.datetime.now().isoformat(),
+        })
+        self._guardar_plantillas(plantillas)
+        return {"ok": True}
 
     def borrar_plantilla(self, plantilla_id):
-        try:
-            return self._llamar_rpc("borrar_plantilla", {"p_id": plantilla_id})
-        except Exception as e:
-            return {"ok": False, "error": str(e)}
-
-    # ---------- analitica de uso (liviana, sin contenido de videos) ----------
-    def registrar_evento(self, tipo, datos=None):
-        try:
-            return self._llamar_rpc("registrar_evento", {"p_tipo": tipo, "p_datos": datos or {}})
-        except Exception:
-            return {"ok": False}  # nunca debe romper el flujo de la app
-
-    # ---------- soporte: diagnostico y reporte de errores ----------
-    def _ram_total_gb(self):
-        if os.name != "nt":
-            return None
-        try:
-            import ctypes
-
-            class MEMORYSTATUSEX(ctypes.Structure):
-                _fields_ = [
-                    ("dwLength", ctypes.c_ulong), ("dwMemoryLoad", ctypes.c_ulong),
-                    ("ullTotalPhys", ctypes.c_ulonglong), ("ullAvailPhys", ctypes.c_ulonglong),
-                    ("ullTotalPageFile", ctypes.c_ulonglong), ("ullAvailPageFile", ctypes.c_ulonglong),
-                    ("ullTotalVirtual", ctypes.c_ulonglong), ("ullAvailVirtual", ctypes.c_ulonglong),
-                    ("sullAvailExtendedVirtual", ctypes.c_ulonglong),
-                ]
-            m = MEMORYSTATUSEX()
-            m.dwLength = ctypes.sizeof(MEMORYSTATUSEX)
-            ctypes.windll.kernel32.GlobalMemoryStatusEx(ctypes.byref(m))
-            return round(m.ullTotalPhys / (1024 ** 3), 1)
-        except Exception:
-            return None
-
-    def _version_ffmpeg(self):
-        try:
-            import subprocess
-            salida = subprocess.run(
-                [FFMPEG_BIN, "-version"], capture_output=True, text=True, timeout=5,
-                creationflags=subprocess.CREATE_NO_WINDOW if os.name == "nt" else 0,
-            )
-            return (salida.stdout or "").splitlines()[0] if salida.stdout else "desconocida"
-        except Exception:
-            return "desconocida"
-
-    def diagnostico(self):
-        return {
-            "clipxel_version": VERSION_APP,
-            "sistema_operativo": platform.platform(),
-            "cpu": platform.processor() or platform.machine(),
-            "nucleos": os.cpu_count(),
-            "ram_gb": self._ram_total_gb(),
-            "gpu_encoder": self._detectar_motor_gpu(),
-            "ffmpeg": self._version_ffmpeg(),
-        }
-
-    def elegir_archivo_adjunto(self):
-        """Abre el explorador para elegir una captura de pantalla u otro
-        archivo para adjuntar al reporte. El usuario saca la captura con la
-        herramienta que prefiera (Recorte de Windows, etc.) y la adjunta aca."""
-        if not self._ventana:
-            return {"ok": False, "error": "Ventana no disponible."}
-        resultado = self._ventana.create_file_dialog(
-            webview.OPEN_DIALOG,
-            file_types=("Imagenes (*.png;*.jpg;*.jpeg)", "Todos los archivos (*.*)"),
-        )
-        if not resultado:
-            return {"ok": False}
-        ruta = resultado[0]
-        try:
-            with open(ruta, "rb") as f:
-                datos = f.read()
-            if len(datos) > 8 * 1024 * 1024:
-                return {"ok": False, "error": "El archivo pesa mas de 8 MB, elegi uno mas chico."}
-            b64 = base64.b64encode(datos).decode("ascii")
-            return {"ok": True, "nombre": os.path.basename(ruta), "datos_b64": b64}
-        except Exception as e:
-            return {"ok": False, "error": str(e)}
-
-    def reportar_error(self, mensaje, incluir_log=True, adjunto=None):
-        """Manda un reporte de soporte (mensaje del usuario + diagnostico +
-        log reciente + adjunto opcional) a la Edge Function de Supabase."""
-        import urllib.request
-
-        sesion = self._cargar_sesion()
-        log_texto = None
-        if incluir_log:
-            try:
-                ruta_log = os.path.join(_carpeta_datos_app(), "debug.log")
-                with open(ruta_log, "r", encoding="utf-8", errors="replace") as f:
-                    contenido = f.read()
-                log_texto = contenido[-20000:]  # ultimas ~20k caracteres alcanzan
-            except Exception:
-                log_texto = None
-
-        cuerpo = {
-            "email": sesion.get("email"),
-            "mensaje": mensaje,
-            "diagnostico": self.diagnostico(),
-            "log": log_texto,
-            "adjunto": adjunto,
-        }
-        try:
-            req = urllib.request.Request(
-                f"{SUPABASE_URL}/functions/v1/reportar-error",
-                data=json.dumps(cuerpo).encode("utf-8"),
-                headers={"apikey": SUPABASE_ANON_KEY, "Content-Type": "application/json"},
-                method="POST",
-            )
-            with urllib.request.urlopen(req, timeout=20) as resp:
-                resultado = json.loads(resp.read().decode("utf-8"))
-            return resultado
-        except Exception as e:
-            return {"ok": False, "error": f"No se pudo enviar el reporte: {e}"}
-
-    def _leer_uso(self):
-        hoy = datetime.date.today().isoformat()
-        try:
-            with open(_ruta_datos_usuario("uso.json"), "r", encoding="utf-8") as f:
-                datos = json.load(f)
-            if datos.get("fecha") != hoy:
-                return {"fecha": hoy, "clips": 0}
-            return datos
-        except Exception:
-            return {"fecha": hoy, "clips": 0}
-
-    def _incrementar_uso(self, cantidad=1):
-        datos = self._leer_uso()
-        datos["clips"] = datos.get("clips", 0) + cantidad
-        with open(_ruta_datos_usuario("uso.json"), "w", encoding="utf-8") as f:
-            json.dump(datos, f)
-
-    def estado_licencia(self):
-        if self._es_pro():
-            return {"pro": True, "restantes": None, "limite": None}
-        uso = self._leer_uso()
-        restantes = max(LIMITE_GRATIS_DIARIO - uso.get("clips", 0), 0)
-        return {"pro": False, "restantes": restantes, "limite": LIMITE_GRATIS_DIARIO}
-
+        plantillas = [p for p in self._leer_plantillas() if p.get("id") != plantilla_id]
+        self._guardar_plantillas(plantillas)
+        return {"ok": True}
 
     # ---------- actualizaciones ----------
     def obtener_estado_actualizacion(self):
@@ -995,11 +564,6 @@ class Api:
     def procesar_todo(self, payload):
         try:
             total = len(payload["clips"])
-            if not self._es_pro():
-                uso = self._leer_uso()
-                restantes = max(LIMITE_GRATIS_DIARIO - uso.get("clips", 0), 0)
-                if total > restantes:
-                    return {"ok": False, "error": "limite_gratis", "restantes": restantes, "limite": LIMITE_GRATIS_DIARIO}
             self._evento_cancelar.clear()
             with self._progreso_lock:
                 self.progreso = {
@@ -1009,12 +573,6 @@ class Api:
                     "logs": [], "terminado": False,
                 }
             threading.Thread(target=self._procesar_todo_worker, args=(payload,), daemon=True).start()
-            threading.Thread(target=self.registrar_evento, args=("proceso_lote", {
-                "so": platform.system(),
-                "motor": payload.get("motor"),
-                "resolucion": payload.get("resolucion"),
-                "cantidad_clips": total,
-            }), daemon=True).start()
             return {"ok": True}
         except Exception as e:
             with self._progreso_lock:
@@ -1198,8 +756,6 @@ class Api:
                 mensaje = (f"OK: {os.path.basename(clip)} -> {os.path.basename(resultado)}" if exito
                            else f"ERROR: {os.path.basename(clip)} -> {resultado}")
                 self._agregar_log(mensaje, exito)
-                if exito and not self._es_pro():
-                    self._incrementar_uso(1)
                 with self._progreso_lock:
                     self.progreso["completados"] = idx + 1
                     self.progreso["por_clip"][idx] = 1.0

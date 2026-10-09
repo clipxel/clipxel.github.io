@@ -32,62 +32,16 @@
   <symbol id="i-pause" viewBox="0 0 24 24" fill="currentColor" stroke="none"><rect x="5" y="3" width="5" height="18"/><rect x="14" y="3" width="5" height="18"/></symbol>
 </svg>
 
-<div class="auth-gate" id="authGate">
-  <div class="auth-gate-card">
-    <div class="brand" style="justify-content:center;margin-bottom:22px"><img src="logo-icon.png" width="32" height="32" alt="" style="border-radius:5px"><img src="logo-wordmark.png" height="20" alt="Clipxel" style="width:auto"></div>
-    <h1>Registrate o iniciá sesión</h1>
-    <p>Necesitás una cuenta de Google para usar Clipxel — es gratis, y si compraste Pro se activa solo con la misma cuenta.</p>
-    <button class="btn-google-gate" id="gateLoginGoogle">
-      <svg width="18" height="18" viewBox="0 0 48 48"><path fill="#FFC107" d="M43.6 20.5H42V20H24v8h11.3c-1.6 4.7-6.1 8-11.3 8-6.6 0-12-5.4-12-12s5.4-12 12-12c3.1 0 5.8 1.1 8 3l5.7-5.7C34.6 6 29.6 4 24 4 12.9 4 4 12.9 4 24s8.9 20 20 20 20-8.9 20-20c0-1.3-.1-2.7-.4-3.5z"/><path fill="#FF3D00" d="M6.3 14.7l6.6 4.8C14.6 15.9 18.9 13 24 13c3.1 0 5.8 1.1 8 3l5.7-5.7C34.6 6 29.6 4 24 4c-7.6 0-14.1 4.3-17.7 10.7z"/><path fill="#4CAF50" d="M24 44c5.5 0 10.4-1.9 14.2-5.1l-6.6-5.6c-2 1.5-4.6 2.5-7.6 2.5-5.2 0-9.6-3.3-11.3-7.9l-6.6 5.1C9.8 39.6 16.4 44 24 44z"/><path fill="#1976D2" d="M43.6 20.5H42V20H24v8h11.3c-.8 2.3-2.2 4.2-4.1 5.6l6.6 5.6C40.9 36.5 44 30.8 44 24c0-1.3-.1-2.7-.4-3.5z"/></svg>
-      Continuar con Google
-    </button>
-    <p class="auth-gate-msg" id="gateMsg"></p>
-    <div id="gateDispositivos" style="display:none;text-align:left;margin-top:10px">
-      <div id="gateDispositivosList"></div>
-    </div>
-  </div>
-</div>
-
 <div class="app" id="app">
 
   <div class="topbar">
     <div class="brand"><img src="logo-icon.png" width="32" height="32" alt="" style="border-radius:5px"><img src="logo-wordmark.png" height="20" alt="Clipxel" style="width:auto"></div>
-    <span class="plan-badge" id="btnPlan">Gratis</span>
+    <span class="plan-badge is-pro">100% Gratis</span>
     <div class="steps" id="steps"></div>
     <div class="theme-switcher">
-      <div class="cuenta-wrap">
-        <button class="cuenta-avatar" id="btnCuenta" title="Mi cuenta"><span id="cuentaInicial">?</span></button>
-        <div class="cuenta-pop" id="cuentaPop">
-          <div class="cuenta-pop-head">
-            <div class="cuenta-avatar cuenta-avatar-lg"><span id="cuentaInicialGrande">?</span></div>
-            <div>
-              <div class="cuenta-email" id="cuentaEmail">—</div>
-              <span class="chip-plan" id="cuentaChipPlan">Gratis</span>
-            </div>
-          </div>
-          <button class="cuenta-item" id="btnAbrirDispositivos">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="2" width="16" height="20" rx="2"/><line x1="10" y1="18" x2="14" y2="18"/></svg>
-            Dispositivos
-          </button>
-          <button class="cuenta-item" id="btnAbrirReporte">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><line x1="12" y1="8" x2="12" y2="13"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-            Reportar un problema
-          </button>
-          <a class="cuenta-item" href="https://clipxel.github.io/cuenta.html" target="_blank" rel="noopener">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
-            Administrar cuenta (web)
-          </a>
-          <button class="cuenta-item" id="btnAbrirAtajos">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="4" width="20" height="16" rx="2"/><line x1="6" y1="9" x2="6" y2="9"/><line x1="10" y1="9" x2="10" y2="9"/><line x1="14" y1="9" x2="14" y2="9"/><line x1="18" y1="9" x2="18" y2="9"/><line x1="7" y1="15" x2="17" y2="15"/></svg>
-            Atajos de teclado
-          </button>
-          <div class="cuenta-sep"></div>
-          <button class="cuenta-item cuenta-item-danger" id="btnCerrarSesionCuenta">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
-            Cerrar sesión
-          </button>
-        </div>
-      </div>
+      <button class="icon-toggle" id="btnAbrirAtajos" title="Atajos de teclado">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="4" width="20" height="16" rx="2"/><line x1="6" y1="9" x2="6" y2="9"/><line x1="10" y1="9" x2="10" y2="9"/><line x1="14" y1="9" x2="14" y2="9"/><line x1="18" y1="9" x2="18" y2="9"/><line x1="7" y1="15" x2="17" y2="15"/></svg>
+      </button>
       <div class="notif-wrap">
         <button class="icon-toggle" id="btnNotif" title="Actualizaciones">
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8a6 6 0 10-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 01-3.46 0"/></svg>
@@ -138,7 +92,7 @@
           <button class="tool-btn" id="btnLoadPng" data-atajo="loadPng"><svg width="17" height="17"><use href="#i-upload"/></svg><span class="tip"><span class="tip-title">Cargar PNG</span><span class="tip-desc">Importá una máscara ya pintada, guardada como imagen PNG.</span><span class="tip-demo tip-demo-upload"><svg viewBox="0 0 40 40"><rect class="tip-demo-tray" x="8" y="26" width="24" height="8" rx="2"/><path class="tip-demo-arrow" d="M20 24 V6 M13 13 L20 6 L27 13"/></svg></span></span></button>
           <button class="tool-btn" id="btnBajarPng" data-atajo="downloadPng"><svg width="17" height="17"><use href="#i-download"/></svg><span class="tip"><span class="tip-title">Bajar máscara como PNG</span><span class="tip-desc">Guardá la máscara pintada como archivo PNG en tu PC.</span><span class="tip-demo tip-demo-download"><svg viewBox="0 0 40 40"><rect class="tip-demo-tray" x="8" y="26" width="24" height="8" rx="2"/><path class="tip-demo-arrow-down" d="M20 6 V24 M13 17 L20 24 L27 17"/></svg></span></span></button>
           <div class="tool-sep"></div>
-          <button class="tool-btn" id="btnGuardarPlantilla" data-atajo="guardarPlantilla"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg><span class="tip"><span class="tip-title">Guardar como plantilla</span><span class="tip-desc">Guarda esta máscara en tu cuenta para reutilizarla en otra PC sin volver a pintar.</span><span class="tip-demo tip-demo-save"><svg viewBox="0 0 40 40"><rect class="tip-demo-frame" x="9" y="8" width="22" height="22" rx="3"/><path class="tip-demo-check" d="M14 20 L18 24 L27 14"/></svg></span></span></button>
+          <button class="tool-btn" id="btnGuardarPlantilla" data-atajo="guardarPlantilla"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg><span class="tip"><span class="tip-title">Guardar como plantilla</span><span class="tip-desc">Guarda esta máscara en esta PC para reutilizarla en otro clip sin volver a pintar.</span><span class="tip-demo tip-demo-save"><svg viewBox="0 0 40 40"><rect class="tip-demo-frame" x="9" y="8" width="22" height="22" rx="3"/><path class="tip-demo-check" d="M14 20 L18 24 L27 14"/></svg></span></span></button>
           <button class="tool-btn" id="btnMisPlantillas" data-atajo="misPlantillas"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg><span class="tip"><span class="tip-title">Mis plantillas guardadas</span><span class="tip-desc">Elegí una plantilla guardada y cargala en el cuadro actual con un click.</span><span class="tip-demo tip-demo-templates"><svg viewBox="0 0 40 40"><rect class="tip-demo-cell c1" x="6" y="6" width="12" height="12" rx="2"/><rect class="tip-demo-cell c2" x="22" y="6" width="12" height="12" rx="2"/><rect class="tip-demo-cell c3" x="6" y="22" width="12" height="12" rx="2"/><rect class="tip-demo-cell c4" x="22" y="22" width="12" height="12" rx="2"/></svg></span></span></button>
           <div class="tool-pop-wrap">
             <button class="tool-btn" id="btnAjustarMascara" data-atajo="ajustarMascara"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="4" y1="6" x2="20" y2="6"/><circle cx="9" cy="6" r="2" fill="currentColor" stroke="none"/><line x1="4" y1="12" x2="20" y2="12"/><circle cx="15" cy="12" r="2" fill="currentColor" stroke="none"/><line x1="4" y1="18" x2="20" y2="18"/><circle cx="11" cy="18" r="2" fill="currentColor" stroke="none"/></svg><span class="tip"><span class="tip-title">Ajustar máscara cargada</span><span class="tip-desc">Calado, extender/reducir y opacidad de la máscara que cargaste (PNG o plantilla), sin repintar.</span></span></button>
@@ -297,40 +251,11 @@
 
 <div class="brush-cursor" id="brushCursor"></div>
 
-<div class="licencia-overlay" id="dispositivosOverlay">
-  <div class="licencia-modal card" style="max-width:420px;text-align:left">
-    <button class="licencia-close" id="dispositivosClose" aria-label="Cerrar">✕</button>
-    <h3 style="text-align:center">Tus dispositivos</h3>
-    <p class="licencia-status" id="dispositivosStatus" style="text-align:center">Cargando...</p>
-    <div id="dispositivosList"></div>
-  </div>
-</div>
-
-<div class="licencia-overlay" id="reporteOverlay">
-  <div class="licencia-modal card" style="max-width:440px;text-align:left">
-    <button class="licencia-close" id="reporteClose" aria-label="Cerrar">✕</button>
-    <h3 style="text-align:center">Reportar un problema</h3>
-    <p class="licencia-status" style="text-align:center">Contanos qué pasó. Se manda tu mensaje junto con datos técnicos para ayudarte más rápido.</p>
-    <textarea id="reporteTexto" class="reporte-textarea" rows="5" placeholder="Describí el problema..."></textarea>
-    <label class="reporte-check">
-      <input type="checkbox" id="reporteIncluirLog" checked>
-      Adjuntar el registro (log) de la app
-    </label>
-    <button class="btn btn-ghost" id="reporteAdjuntar" style="width:100%;justify-content:center;margin-top:8px">Adjuntar captura de pantalla...</button>
-    <p class="reporte-adjunto-nombre" id="reporteAdjuntoNombre"></p>
-    <p class="licencia-msg" id="reporteMsg"></p>
-    <div class="licencia-actions">
-      <button class="btn btn-ghost" id="reporteCancelar">Cancelar</button>
-      <button class="btn btn-primary" id="reporteEnviar">Enviar reporte</button>
-    </div>
-  </div>
-</div>
-
 <div class="licencia-overlay" id="guardarPlantillaOverlay">
   <div class="licencia-modal card" style="max-width:400px;text-align:left">
     <button class="licencia-close" id="guardarPlantillaClose" aria-label="Cerrar">✕</button>
     <h3 style="text-align:center">Guardar como plantilla</h3>
-    <p class="licencia-status" style="text-align:center">Queda en tu cuenta — la vas a poder cargar en cualquier PC donde inicies sesión, sin volver a pintar.</p>
+    <p class="licencia-status" style="text-align:center">Queda guardada en esta PC — la vas a poder cargar en otro clip con un click, sin volver a pintar.</p>
     <input type="text" id="plantillaNombreInput" class="licencia-input" placeholder="Nombre de la plantilla" style="text-transform:none;letter-spacing:normal">
     <p class="licencia-msg" id="guardarPlantillaMsg"></p>
     <div class="licencia-actions">
@@ -370,18 +295,6 @@
     <div class="licencia-actions">
       <button class="btn btn-ghost" id="atajosRestablecer">Restablecer</button>
       <button class="btn btn-primary" id="atajosListo">Listo</button>
-    </div>
-  </div>
-</div>
-
-<div class="licencia-overlay" id="upsellOverlay">
-  <div class="licencia-modal card">
-    <button class="licencia-close" id="upsellCerrar" aria-label="Cerrar">✕</button>
-    <div class="licencia-icon"><svg width="20" height="20"><use href="#i-spark"/></svg></div>
-    <h3>Lote listo</h3>
-    <p class="licencia-status" id="upsellTexto"></p>
-    <div class="licencia-actions">
-      <a class="btn btn-primary" href="https://clipxel.github.io/#precios" target="_blank" rel="noopener" style="text-decoration:none;justify-content:center;flex:1">Ver plan Pro</a>
     </div>
   </div>
 </div>

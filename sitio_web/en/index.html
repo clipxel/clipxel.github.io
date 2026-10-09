@@ -18,7 +18,6 @@
 <link rel="icon" type="image/png" href="/assets/favicon-64.png" />
 <link rel="apple-touch-icon" href="/assets/apple-touch-icon.png" />
 <link rel="stylesheet" href="/assets/lang-switch.css" />
-<link rel="stylesheet" href="/assets/cuenta-nav.css" />
 <script type="application/ld+json">
 {
   "@context": "https://schema.org",
@@ -29,16 +28,12 @@
   "description": "Detects and repairs burnt or dead sensor pixels in videos, frame by frame, 100% on the user's computer.",
   "url": "https://clipxel.github.io/en/",
   "offers": [
-    { "@type": "Offer", "name": "Free", "price": "0", "priceCurrency": "USD" },
-    { "@type": "Offer", "name": "Pro", "price": "20", "priceCurrency": "USD" }
+    { "@type": "Offer", "name": "Free", "price": "0", "priceCurrency": "USD" }
   ]
 }
 </script>
 <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-5750366535948261"
      crossorigin="anonymous"></script>
-<script
-  src="https://www.paypal.com/sdk/js?client-id=BAAMVIRZEQcDj5agIU_iIHZGaGHxizZwT3SgZsWd1WIMLpKNx1ODKr9zLeAkFWiMbiePigpedTyZ0Qg4rA&components=hosted-buttons&disable-funding=venmo&currency=USD">
-</script>
 
 <style>
   /* ---------- tokens ---------- */
@@ -406,7 +401,6 @@
     </nav>
     <div class="nav-cta">
       <div id="langSwitchMount"></div>
-      <div id="navCtaAccount"></div>
       <a class="btn btn-primary" href="instalacion.html">Download</a>
     </div>
   </div>
@@ -432,80 +426,22 @@
       <div class="pricing-hero reveal" id="precios">
         <div class="price-card glass">
           <div class="price-top">
-            <span class="price-name">Free</span>
-            <span class="price-tag">No cost</span>
+            <span class="price-name">CLIPXEL</span>
+            <span class="price-tag">Free forever</span>
           </div>
           <div class="price-amount">$0</div>
-          <p class="price-desc">Up to 5 clips per day. Ideal for trying the app or fixing a one-off defect.</p>
+          <p class="price-desc">Unlimited clips, no account, no registration. Everything runs on your computer.</p>
           <ul class="price-list">
             <li>Both repair engines</li>
             <li>Full brush mask tool</li>
             <li>Camera metadata and live preview</li>
-          </ul>
-          <a class="btn btn-ghost" href="instalacion.html">Download</a>
-        </div>
-        <div class="price-card price-pro glass">
-          <div class="price-top">
-            <span class="price-name">Pro</span>
-            <span class="price-tag price-tag-pro">One-time payment</span>
-          </div>
-          <div class="price-amount">$20 <span>USD</span></div>
-          <p class="price-desc">Unlimited clips per day, forever. No subscription.</p>
-          <ul class="price-list">
-            <li>Everything in the Free plan</li>
             <li>No daily clip limit</li>
-            <li>Unrestricted batch processing</li>
           </ul>
-          <button class="btn btn-primary" id="btnComprarPro">Buy Pro</button>
+          <a class="btn btn-primary" href="instalacion.html">Download free</a>
         </div>
       </div>
     </div>
   </section>
-
-  <div class="pago-overlay" id="pagoOverlay">
-    <div class="pago-modal glass">
-      <button class="pago-close" id="pagoClose" aria-label="Close">✕</button>
-      <span class="eyebrow">CLIPXEL Pro</span>
-      <h3>Pay $20 USD</h3>
-      <p>One-time payment, no subscription. After confirming on PayPal you'll receive your key by email shortly.</p>
-      <div id="paypal-container-DPBYFXST9DGP6" class="paypal-btn-wrap">
-        <p class="paypal-fallback" id="paypalCargando">Loading payment button...</p>
-      </div>
-    </div>
-  </div>
-
-  <script>
-    (function () {
-      var intentos = 0;
-      function intentarRenderPaypal() {
-        intentos++;
-        if (window.paypal && window.paypal.HostedButtons) {
-          document.getElementById("paypalCargando").remove();
-          paypal.HostedButtons({ hostedButtonId: "DPBYFXST9DGP6" }).render("#paypal-container-DPBYFXST9DGP6");
-        } else if (intentos < 20) {
-          setTimeout(intentarRenderPaypal, 300);
-        } else {
-          document.getElementById("paypalCargando").innerHTML =
-            "Couldn't load the PayPal button (might be an ad blocker). " +
-            "Disable it for this site and reload the page, or contact us.";
-        }
-      }
-      intentarRenderPaypal();
-    })();
-    var pagoOverlay = document.getElementById("pagoOverlay");
-    document.getElementById("btnComprarPro").addEventListener("click", function () {
-      pagoOverlay.classList.add("open");
-    });
-    document.getElementById("pagoClose").addEventListener("click", function () {
-      pagoOverlay.classList.remove("open");
-    });
-    pagoOverlay.addEventListener("click", function (e) {
-      if (e.target === pagoOverlay) pagoOverlay.classList.remove("open");
-    });
-    window.addEventListener("keydown", function (e) {
-      if (e.key === "Escape") pagoOverlay.classList.remove("open");
-    });
-  </script>
 
   <section class="section" id="cuando-sirve">
     <div class="wrap">
@@ -892,5 +828,3 @@
 })();
 </script>
 <script src="/assets/lang-switch.js" defer></script>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
-<script src="/assets/cuenta-nav.js" defer></script>

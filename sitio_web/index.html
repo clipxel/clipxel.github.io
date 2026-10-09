@@ -17,7 +17,6 @@
 <link rel="icon" type="image/png" href="/assets/favicon-64.png" />
 <link rel="apple-touch-icon" href="/assets/apple-touch-icon.png" />
 <link rel="stylesheet" href="/assets/lang-switch.css" />
-<link rel="stylesheet" href="/assets/cuenta-nav.css" />
 <script type="application/ld+json">
 {
   "@context": "https://schema.org",
@@ -28,16 +27,12 @@
   "description": "Detecta y repara píxeles quemados o muertos del sensor en videos, cuadro a cuadro, 100% en la computadora del usuario.",
   "url": "https://clipxel.github.io/",
   "offers": [
-    { "@type": "Offer", "name": "Gratis", "price": "0", "priceCurrency": "USD" },
-    { "@type": "Offer", "name": "Pro", "price": "20", "priceCurrency": "USD" }
+    { "@type": "Offer", "name": "Gratis", "price": "0", "priceCurrency": "USD" }
   ]
 }
 </script>
 <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-5750366535948261"
      crossorigin="anonymous"></script>
-<script
-  src="https://www.paypal.com/sdk/js?client-id=BAAMVIRZEQcDj5agIU_iIHZGaGHxizZwT3SgZsWd1WIMLpKNx1ODKr9zLeAkFWiMbiePigpedTyZ0Qg4rA&components=hosted-buttons&disable-funding=venmo&currency=USD">
-</script>
 
 <style>
   /* ---------- tokens ---------- */
@@ -497,7 +492,6 @@
     </nav>
     <div class="nav-cta">
       <div id="langSwitchMount"></div>
-      <div id="navCtaAccount"></div>
       <a class="btn btn-primary" href="instalacion.html">Descargar</a>
     </div>
   </div>
@@ -566,87 +560,29 @@
   <section class="section" id="precios">
     <div class="wrap">
       <div class="section-head reveal">
-        <span class="eyebrow">Precios</span>
-        <h2>Empezá gratis, pasate a Pro cuando lo necesites.</h2>
-        <p>Sin suscripción — el plan Pro es un pago único, para siempre.</p>
+        <span class="eyebrow">Precio</span>
+        <h2>100% gratis.</h2>
+        <p>Sin cuenta, sin registro, sin límite diario — instalás y usás.</p>
       </div>
       <div class="pricing-hero reveal">
         <div class="price-card glass">
           <div class="price-top">
-            <span class="price-name">Gratis</span>
-            <span class="price-tag">Sin costo</span>
+            <span class="price-name">CLIPXEL</span>
+            <span class="price-tag">Gratis para siempre</span>
           </div>
           <div class="price-amount">$0</div>
-          <p class="price-desc">Hasta 5 clips por día. Ideal para probar la app o resolver un defecto puntual.</p>
+          <p class="price-desc">Clips ilimitados, sin cuenta ni registro. Todo corre en tu computadora.</p>
           <ul class="price-list">
             <li>Los 2 motores de reparación</li>
             <li>Máscara con pincel completo</li>
             <li>Metadata de cámara y vista previa en vivo</li>
-          </ul>
-          <a class="btn btn-ghost" href="instalacion.html">Descargar</a>
-        </div>
-        <div class="price-card price-pro glass">
-          <div class="price-top">
-            <span class="price-name">Pro</span>
-            <span class="price-tag price-tag-pro">Pago único</span>
-          </div>
-          <div class="price-amount">$20 <span>USD</span></div>
-          <p class="price-desc">Clips ilimitados por día, para siempre. Sin suscripción.</p>
-          <ul class="price-list">
-            <li>Todo lo del plan Gratis</li>
             <li>Sin límite diario de clips</li>
-            <li>Procesamiento por lotes sin restricción</li>
           </ul>
-          <button class="btn btn-primary" id="btnComprarPro">Comprar Pro</button>
+          <a class="btn btn-primary" href="instalacion.html">Descargar gratis</a>
         </div>
       </div>
     </div>
   </section>
-
-  <div class="pago-overlay" id="pagoOverlay">
-    <div class="pago-modal glass">
-      <button class="pago-close" id="pagoClose" aria-label="Cerrar">✕</button>
-      <span class="eyebrow">CLIPXEL Pro</span>
-      <h3>Pagar $20 USD</h3>
-      <p>Pago único, sin suscripción. Al confirmar en PayPal recibís la clave por email en poco tiempo.</p>
-      <div id="paypal-container-DPBYFXST9DGP6" class="paypal-btn-wrap">
-        <p class="paypal-fallback" id="paypalCargando">Cargando botón de pago...</p>
-      </div>
-    </div>
-  </div>
-
-  <script>
-    (function () {
-      var intentos = 0;
-      function intentarRenderPaypal() {
-        intentos++;
-        if (window.paypal && window.paypal.HostedButtons) {
-          document.getElementById("paypalCargando").remove();
-          paypal.HostedButtons({ hostedButtonId: "DPBYFXST9DGP6" }).render("#paypal-container-DPBYFXST9DGP6");
-        } else if (intentos < 20) {
-          setTimeout(intentarRenderPaypal, 300);
-        } else {
-          document.getElementById("paypalCargando").innerHTML =
-            'No se pudo cargar el botón de PayPal (puede ser un bloqueador de anuncios). ' +
-            'Desactivalo para este sitio y recargá la página, o escribinos.';
-        }
-      }
-      intentarRenderPaypal();
-    })();
-    var pagoOverlay = document.getElementById("pagoOverlay");
-    document.getElementById("btnComprarPro").addEventListener("click", function () {
-      pagoOverlay.classList.add("open");
-    });
-    document.getElementById("pagoClose").addEventListener("click", function () {
-      pagoOverlay.classList.remove("open");
-    });
-    pagoOverlay.addEventListener("click", function (e) {
-      if (e.target === pagoOverlay) pagoOverlay.classList.remove("open");
-    });
-    window.addEventListener("keydown", function (e) {
-      if (e.key === "Escape") pagoOverlay.classList.remove("open");
-    });
-  </script>
 
   <section class="section" id="cuando-sirve">
     <div class="wrap">
@@ -1008,5 +944,3 @@
 })();
 </script>
 <script src="/assets/lang-switch.js" defer></script>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
-<script src="/assets/cuenta-nav.js" defer></script>
