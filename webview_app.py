@@ -233,7 +233,9 @@ class Api:
         return nuevo_id
 
     def _es_pro(self):
-        return self._cargar_sesion().get("plan") == "pro"
+        # CLIPXEL Pro es gratis para todos: no hay limite diario ni
+        # chequeo de plan, cualquier cuenta logueada cuenta como Pro.
+        return True
 
     def estado_sesion(self):
         sesion = self._cargar_sesion()
