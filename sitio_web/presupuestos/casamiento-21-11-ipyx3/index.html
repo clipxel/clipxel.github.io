@@ -135,6 +135,7 @@
   .plan ul{ list-style:none; margin:22px 0 26px; padding-top:18px; border-top:1px solid var(--line); display:flex; flex-direction:column; gap:8px; font-size:14px; font-weight:300; color:var(--muted); flex-grow:1; }
   .plan ul li::before{ content:'—  '; color:var(--muted2); }
   .locked .plan .pill{ opacity:.28; pointer-events:none; }
+  .hint a{ text-decoration:underline; text-underline-offset:3px; }
   .hint{ text-align:center; font-size:13px; margin-top:20px; min-height:18px; opacity:.9; transition:opacity .3s; position:relative; }
   .fine{ position:relative; max-width:700px; margin:26px auto 0; text-align:center; font-size:12.5px; font-weight:300; opacity:.85; line-height:1.6; }
   @media (max-width:900px){ .plans{ grid-template-columns:1fr; max-width:440px; margin-left:auto; margin-right:auto; } .plan h3{ min-height:0; } }
@@ -274,8 +275,7 @@
       <h2>Elegí cómo <em>pagar</em></h2>
       <p class="lead">Contratando las cinco piezas accedés a un precio menor. Elegí la opción que te quede mejor.</p>
     </div>
-    <label class="accept reveal"><input type="checkbox" id="acepto"><span>Leí y acepto los <a href="#terminos">términos y condiciones</a>.</span></label>
-    <div class="plans locked" id="plans">
+    <div class="plans" id="plans">
       <div class="plan reveal best" style="--d:0ms">
         <div class="p-top"><span class="p-n">Opción 1</span><span class="p-tag">Mejor precio</span></div>
         <h3>Pago total <em>por adelantado</em></h3>
@@ -301,7 +301,7 @@
         <button type="button" class="pill dark choose" data-opt="3" data-title="Pago total a la entrega" data-amount="US$750" data-detail="Se transfiere al entregar el material">Elegir esta opción <svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M2 8h11M9 4l4 4-4 4"/></svg></button>
       </div>
     </div>
-    <p class="hint" id="hint">Aceptá los términos y condiciones para elegir una opción.</p>
+    <p class="hint">Al contratar el servicio, aceptás los <a href="#terminos">términos y condiciones</a>.</p>
     <p class="fine">Valores en dólares estadounidenses. El pago se realiza por transferencia bancaria, en dólares o en pesos al dólar oficial del día<span id="fx-inline"></span>. Los precios promocionales son válidos solo contratando el paquete completo; las piezas sueltas se cobran a su precio individual.</p>
   </div>
 </section>
@@ -345,9 +345,6 @@
 
 <script>
   var reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-  var cb=document.getElementById('acepto'), plans=document.getElementById('plans'), hint=document.getElementById('hint');
-  function sync(){ plans.classList.toggle('locked', !cb.checked); hint.style.opacity = cb.checked ? 0 : .9; }
-  cb.addEventListener('change', sync); sync();
   function count(el){
     if(reduce) return; var to=+el.dataset.to, t0=null, dur=1200;
     function step(t){ if(!t0) t0=t; var p=Math.min((t-t0)/dur,1), e=1-Math.pow(1-p,3); el.textContent=Math.round(to*e); if(p<1) requestAnimationFrame(step); }
